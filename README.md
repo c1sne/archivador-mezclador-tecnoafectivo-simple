@@ -74,7 +74,7 @@ El lienzo mezcla tres capas: sintetizador de fondo, materiales manipulables y pi
 
 ### Codigo Vivo
 
-El sintetizador usa un lenguaje pequeno de funciones encadenadas. La idea no es reemplazar Hydra, sino ofrecer una puerta local y sencilla para generar texturas, ritmos visuales y fondos capturables.
+El sintetizador usa un lenguaje pequeno de funciones encadenadas. La idea no es reemplazar Hydra, sino ofrecer una puerta local y sencilla para generar texturas, ritmos visuales y fondos capturables. Al abrir `Codigo vivo`, el motor arranca; cada cambio en el editor se recompila con una espera corta, `Aplicar` fuerza la recompilacion inmediata y `Capturar` convierte el resultado en un material editable dentro del collage.
 
 ## Interfaz
 

@@ -24,6 +24,7 @@ const state = {
     startedAt: 0,
     lastRenderedAt: 0,
     raf: null,
+    applyTimer: null,
   },
   nextFileId: 1,
   nextItemId: 1,
@@ -228,7 +229,8 @@ function bindEvents() {
   el.addDemoImageBtn.addEventListener("click", addDemoImageItem);
   el.toggleCodeBtn.addEventListener("click", toggleCodePanel);
   el.applyPresetBtn.addEventListener("click", applySynthPreset);
-  el.runCodeBtn.addEventListener("click", applyLiveCode);
+  el.liveCodeInput.addEventListener("input", scheduleLiveCodeApply);
+  el.runCodeBtn.addEventListener("click", runLiveCodeNow);
   el.pauseSynthBtn.addEventListener("click", toggleSynthPause);
   el.captureSynthBtn.addEventListener("click", captureSynthMaterial);
   el.clearPaintBtn.addEventListener("click", () => {
@@ -281,22 +283,38 @@ function bindEvents() {
 
 function toggleCodePanel() {
   state.codePanelOpen = !state.codePanelOpen;
+  if (state.codePanelOpen) {
+    state.synth.running = true;
+    runLiveCodeNow();
+  }
   syncCodePanel();
   resizePaintCanvas();
   resizeSynthCanvas();
-  if (state.codePanelOpen) renderSynthFrame();
 }
 
 function syncCodePanel() {
   el.liveCodePanel.classList.toggle("closed", !state.codePanelOpen);
-  el.toggleCodeBtn.classList.toggle("active", state.codePanelOpen);
+  el.toggleCodeBtn.classList.toggle("active", state.codePanelOpen || state.synth.running);
   el.pauseSynthBtn.textContent = state.synth.running ? "Pausa" : "Play";
 }
 
 function applySynthPreset() {
   const preset = SYNTH_PRESETS[el.synthPresetSelect.value] || SYNTH_PRESETS.neon;
   el.liveCodeInput.value = preset;
+  runLiveCodeNow();
+}
+
+function scheduleLiveCodeApply() {
+  setCodeStatus("editando...");
+  window.clearTimeout(state.synth.applyTimer);
+  state.synth.applyTimer = window.setTimeout(runLiveCodeNow, 180);
+}
+
+function runLiveCodeNow() {
+  window.clearTimeout(state.synth.applyTimer);
+  state.synth.applyTimer = null;
   applyLiveCode();
+  if (state.synth.running) startSynth();
 }
 
 function applyLiveCode(options = {}) {
@@ -314,7 +332,7 @@ function applyLiveCode(options = {}) {
 function toggleSynthPause() {
   state.synth.running = !state.synth.running;
   syncCodePanel();
-  if (state.synth.running) startSynth();
+  if (state.synth.running) runLiveCodeNow();
 }
 
 function captureSynthMaterial() {
