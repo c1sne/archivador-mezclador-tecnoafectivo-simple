@@ -25,6 +25,9 @@ const state = {
     lastRenderedAt: 0,
     raf: null,
     applyTimer: null,
+    source: null,
+    sourceLoadingKey: "",
+    renderAspect: 16 / 9,
   },
   nextFileId: 1,
   nextItemId: 1,
@@ -36,6 +39,12 @@ const imageCache = new Map();
 const noiseTextureCache = new Map();
 
 const SYNTH_PRESETS = {
+  imagen: `src()
+  .modulate(noise(5.5, 0.32), 0.18)
+  .pixelate(130, 72)
+  .contrast(1.18)
+  .blend(osc(18, 0.08, 0.2).color(0.55, 0.22, 1.0), 0.16)
+  .out()`,
   neon: `osc(11, 0.14, 0.4)
   .kaleid(6)
   .rotate(0.25, 0.06)
@@ -284,6 +293,7 @@ function bindEvents() {
 function toggleCodePanel() {
   state.codePanelOpen = !state.codePanelOpen;
   if (state.codePanelOpen) {
+    useImagePresetIfRelevant();
     state.synth.running = true;
     runLiveCodeNow();
   }
@@ -321,12 +331,137 @@ function applyLiveCode(options = {}) {
   try {
     state.synth.code = el.liveCodeInput.value;
     state.synth.program = parseSynthCode(state.synth.code);
-    setCodeStatus("vivo");
+    if (synthProgramUsesImageSource(state.synth.program)) {
+      prepareSynthSourceTexture({ render: options.render !== false });
+    } else {
+      state.synth.source = null;
+      setCodeStatus("vivo");
+    }
     if (options.render !== false) renderSynthFrame();
   } catch (error) {
     state.synth.program = null;
+    state.synth.source = null;
     setCodeStatus(error.message || "codigo no valido", true);
   }
+}
+
+function useImagePresetIfRelevant() {
+  if (!getSynthSourceItem()) return;
+  const current = normalizeSynthCode(el.liveCodeInput.value);
+  const knownPreset = Object.values(SYNTH_PRESETS).some((preset) => normalizeSynthCode(preset) === current);
+  if (!knownPreset) return;
+
+  el.synthPresetSelect.value = "imagen";
+  el.liveCodeInput.value = SYNTH_PRESETS.imagen;
+}
+
+function normalizeSynthCode(code) {
+  return String(code || "").replace(/\s+/g, " ").trim();
+}
+
+function synthProgramUsesImageSource(node) {
+  if (!node) return false;
+  const name = node.name.toLowerCase();
+  if (["src", "image", "material"].includes(name)) return true;
+  const nestedArgs = node.args.some((arg) => arg?.name && synthProgramUsesImageSource(arg));
+  return nestedArgs || node.transforms.some((transform) =>
+    transform.args.some((arg) => arg?.name && synthProgramUsesImageSource(arg))
+  );
+}
+
+function getSynthSourceItem() {
+  const selected = getSelectedItem();
+  if (selected && ["image", "video"].includes(selected.kind)) return selected;
+  return state.items
+    .slice()
+    .reverse()
+    .find((item) => ["image", "video"].includes(item.kind)) || null;
+}
+
+async function prepareSynthSourceTexture(options = {}) {
+  const item = getSynthSourceItem();
+  if (!item) {
+    state.synth.source = null;
+    state.synth.sourceLoadingKey = "";
+    setCodeStatus("src: arrastra o selecciona una imagen");
+    if (options.render) renderSynthFrame();
+    return false;
+  }
+
+  const key = synthSourceKey(item);
+  if (state.synth.source?.key === key) {
+    setCodeStatus(`src: ${shortLabel(item.name)}`);
+    return true;
+  }
+
+  state.synth.sourceLoadingKey = key;
+  setCodeStatus(`cargando src: ${shortLabel(item.name)}`);
+
+  try {
+    const texture = item.kind === "video"
+      ? createVideoSynthTexture(item, key)
+      : await createImageSynthTexture(item, key);
+    if (!texture || state.synth.sourceLoadingKey !== key) return false;
+
+    state.synth.source = texture;
+    setCodeStatus(`src: ${shortLabel(item.name)}`);
+    if (options.render) renderSynthFrame();
+    return true;
+  } catch (error) {
+    if (state.synth.sourceLoadingKey === key) {
+      state.synth.source = null;
+      setCodeStatus("no pude leer la imagen", true);
+      if (options.render) renderSynthFrame();
+    }
+    return false;
+  }
+}
+
+async function createImageSynthTexture(item, key) {
+  const image = await loadImageCached(item.url);
+  const materialCanvas = await createRasterMaterialCanvas(item, image);
+  return createSynthTextureFromCanvas(materialCanvas, key, item);
+}
+
+function createVideoSynthTexture(item, key) {
+  const video = el.piecesLayer.querySelector(`[data-id="${item.id}"] video`);
+  if (!video || video.readyState < 2) return null;
+  const canvas = document.createElement("canvas");
+  canvas.width = clamp(Math.round(item.w), 1, 1000);
+  canvas.height = clamp(Math.round(item.h), 1, 800);
+  const ctx = canvas.getContext("2d");
+  drawImageCover(ctx, video, 0, 0, canvas.width, canvas.height);
+  applyNoiseEngineToCanvas(canvas, item);
+  return createSynthTextureFromCanvas(canvas, key, item);
+}
+
+function createSynthTextureFromCanvas(sourceCanvas, key, item) {
+  const width = 520;
+  const height = Math.max(1, Math.round(width / (state.synth.renderAspect || 1)));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  drawImageCover(ctx, sourceCanvas, 0, 0, width, height);
+  const imageData = ctx.getImageData(0, 0, width, height);
+  return {
+    key,
+    itemId: item.id,
+    name: item.name,
+    width,
+    height,
+    data: imageData.data,
+  };
+}
+
+function synthSourceKey(item) {
+  const visualKey = item.kind === "image" ? imageRenderKey(item) : `${item.url}|${Math.round(item.w)}|${Math.round(item.h)}`;
+  return `${item.id}|${visualKey}|${Math.round((state.synth.renderAspect || 1) * 1000)}`;
+}
+
+function shortLabel(text) {
+  const label = String(text || "imagen");
+  return label.length > 28 ? `${label.slice(0, 25)}...` : label;
 }
 
 function toggleSynthPause() {
@@ -337,17 +472,21 @@ function toggleSynthPause() {
 
 function captureSynthMaterial() {
   renderSynthFrame();
-  const dataUrl = el.synthCanvas.toDataURL("image/png");
+  const selected = getSelectedItem();
+  const selectedCanvas = shouldRenderSynthOnItem(selected)
+    ? el.piecesLayer.querySelector(`[data-id="${selected.id}"] .material-canvas`)
+    : null;
+  const dataUrl = (selectedCanvas || el.synthCanvas).toDataURL("image/png");
   const rect = el.stage.getBoundingClientRect();
   const item = createBaseItem({
-    name: `synth ${dateStamp()}`,
+    name: selectedCanvas ? `${selected.name} procesada` : `synth ${dateStamp()}`,
     kind: "image",
     url: dataUrl,
-    category: "codigo vivo",
-    x: rect.width / 2,
-    y: rect.height / 2,
-    w: Math.min(420, rect.width * 0.48),
-    h: Math.min(260, rect.height * 0.42),
+    category: selectedCanvas ? "imagen procesada" : "codigo vivo",
+    x: selectedCanvas ? selected.x + 28 : rect.width / 2,
+    y: selectedCanvas ? selected.y + 24 : rect.height / 2,
+    w: selectedCanvas ? selected.w : Math.min(420, rect.width * 0.48),
+    h: selectedCanvas ? selected.h : Math.min(260, rect.height * 0.42),
     shape: "soft",
   });
   state.items.push(item);
@@ -785,6 +924,9 @@ function renderPieces() {
       el.piecesLayer.appendChild(piece);
     });
   renderInspector();
+  if (synthProgramUsesImageSource(state.synth.program)) {
+    prepareSynthSourceTexture({ render: true });
+  }
 }
 
 function createPieceContent(item) {
@@ -1038,6 +1180,34 @@ function startSynth() {
 
 function renderSynthFrame() {
   drawSynthToCanvas(el.synthCanvas, state.synth.time);
+  renderSynthOnSelectedMaterial();
+}
+
+function renderSynthOnSelectedMaterial() {
+  const item = getSelectedItem();
+  if (!shouldRenderSynthOnItem(item)) return;
+
+  const canvas = el.piecesLayer.querySelector(`[data-id="${item.id}"] .material-canvas`);
+  if (!canvas) return;
+
+  const maxEdge = 620;
+  const scale = Math.min(1, maxEdge / Math.max(item.w, item.h));
+  canvas.width = Math.max(1, Math.round(item.w * scale));
+  canvas.height = Math.max(1, Math.round(item.h * scale));
+
+  const previousAspect = state.synth.renderAspect;
+  drawSynthToCanvas(canvas, state.synth.time);
+  state.synth.renderAspect = previousAspect;
+}
+
+function shouldRenderSynthOnItem(item) {
+  return Boolean(
+    item &&
+    item.kind === "image" &&
+    item.id === state.selectedId &&
+    state.synth.program &&
+    synthProgramUsesImageSource(state.synth.program)
+  );
 }
 
 function drawSynthToContext(ctx, width, height, time = state.synth.time) {
@@ -1060,6 +1230,7 @@ function drawSynthToCanvas(canvas, time) {
   const imageData = ctx.createImageData(canvas.width, canvas.height);
   const data = imageData.data;
   const aspect = canvas.width / canvas.height;
+  state.synth.renderAspect = aspect;
   let i = 0;
 
   for (let y = 0; y < canvas.height; y += 1) {
@@ -1275,6 +1446,10 @@ function sampleSynthNode(node, u, v, t, depth) {
 function sampleSynthSource(node, x, y, t, depth) {
   const name = node.name.toLowerCase();
 
+  if (name === "src" || name === "image" || name === "material") {
+    return sampleSynthImageSource(x, y);
+  }
+
   if (name === "osc") {
     const freq = argNumber(node.args, 0, 10, x, y, t, depth);
     const sync = argNumber(node.args, 1, 0.1, x, y, t, depth);
@@ -1329,12 +1504,41 @@ function sampleSynthSource(node, x, y, t, depth) {
   return [0, 0, 0, 1];
 }
 
+function sampleSynthImageSource(x, y) {
+  const source = state.synth.source;
+  if (!source?.data) {
+    const fallback = checkerValue(x, y, 10);
+    return fallback ? [0.95, 0.95, 0.9, 1] : [0.05, 0.06, 0.06, 1];
+  }
+
+  const sx = fract(x / (state.synth.renderAspect || 1) + 0.5);
+  const sy = fract(y + 0.5);
+  const px = clamp(Math.floor(sx * source.width), 0, source.width - 1);
+  const py = clamp(Math.floor(sy * source.height), 0, source.height - 1);
+  const index = (py * source.width + px) * 4;
+  return [
+    source.data[index] / 255,
+    source.data[index + 1] / 255,
+    source.data[index + 2] / 255,
+    source.data[index + 3] / 255,
+  ];
+}
+
+function checkerValue(x, y, cells) {
+  return (Math.floor((x + 0.5) * cells) + Math.floor((y + 0.5) * cells)) % 2;
+}
+
 function selectItem(id) {
   state.selectedId = id;
   Array.from(el.piecesLayer.children).forEach((node) => {
     node.classList.toggle("selected", node.dataset.id === id);
   });
   renderInspector();
+  if (synthProgramUsesImageSource(state.synth.program)) {
+    prepareSynthSourceTexture({ render: true });
+  } else if (state.synth.running) {
+    renderSynthFrame();
+  }
 }
 
 function getSelectedItem() {
@@ -1400,7 +1604,11 @@ function updateSelectedVisual() {
   if (!node) return;
   applyItemStyle(node, item);
   const canvas = node.querySelector(".material-canvas");
-  if (canvas) renderImageMaterial(canvas, item);
+  if (synthProgramUsesImageSource(state.synth.program) && ["image", "video"].includes(item.kind)) {
+    prepareSynthSourceTexture({ render: true });
+  } else if (canvas) {
+    renderImageMaterial(canvas, item);
+  }
 }
 
 function deleteSelectedItem() {
@@ -1645,8 +1853,9 @@ async function drawItemToCanvas(ctx, item) {
   clipCanvasShape(ctx, item);
 
   if (item.kind === "image") {
-    const image = await loadImageCached(item.url);
-    const raster = await createRasterMaterialCanvas(item, image);
+    const raster = shouldRenderSynthOnItem(item)
+      ? createSynthMaterialExportCanvas(item)
+      : await createImageExportCanvas(item);
     ctx.drawImage(raster, -item.w / 2, -item.h / 2, item.w, item.h);
   } else if (item.kind === "video") {
     const video = el.piecesLayer.querySelector(`[data-id="${item.id}"] video`);
@@ -1669,15 +1878,33 @@ async function drawItemToCanvas(ctx, item) {
   ctx.restore();
 }
 
+async function createImageExportCanvas(item) {
+  const image = await loadImageCached(item.url);
+  return createRasterMaterialCanvas(item, image);
+}
+
+function createSynthMaterialExportCanvas(item) {
+  const canvas = document.createElement("canvas");
+  canvas.width = clamp(Math.round(item.w), 1, 1000);
+  canvas.height = clamp(Math.round(item.h), 1, 800);
+  const previousAspect = state.synth.renderAspect;
+  drawSynthToCanvas(canvas, state.synth.time);
+  state.synth.renderAspect = previousAspect;
+  return canvas;
+}
+
 async function renderImageMaterial(canvas, item) {
+  if (shouldRenderSynthOnItem(item) && item.id === state.selectedId) return;
   const key = imageRenderKey(item);
   canvas.dataset.renderKey = key;
 
   try {
     const image = await loadImageCached(item.url);
     if (canvas.dataset.renderKey !== key) return;
+    if (shouldRenderSynthOnItem(item) && item.id === state.selectedId) return;
     const raster = await createRasterMaterialCanvas(item, image);
     if (canvas.dataset.renderKey !== key) return;
+    if (shouldRenderSynthOnItem(item) && item.id === state.selectedId) return;
 
     canvas.width = raster.width;
     canvas.height = raster.height;
