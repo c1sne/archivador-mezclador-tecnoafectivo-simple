@@ -354,7 +354,7 @@ label.button:focus-visible {
 
 .studio {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   overflow: hidden;
 }
 
@@ -365,7 +365,7 @@ label.button:focus-visible {
   gap: 10px;
   flex-wrap: wrap;
   padding: 9px;
-  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
   background: #fbfcfb;
 }
 
