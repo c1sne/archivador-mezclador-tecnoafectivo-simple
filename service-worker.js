@@ -1,9 +1,9 @@
-const CACHE_NAME = "mezclador-tecnoafectivo-v5";
+const CACHE_NAME = "mezclador-tecnoafectivo-v6";
 const APP_FILES = [
   "./",
   "./index.html",
-  "./styles.css?v=5",
-  "./app.js?v=5",
+  "./styles.css?v=6",
+  "./app.js?v=6",
   "./manifest.webmanifest",
   "./icon.svg",
 ];

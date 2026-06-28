@@ -11,7 +11,7 @@
     />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=5" />
+    <link rel="stylesheet" href="styles.css?v=6" />
   </head>
   <body>
     <div class="app-shell">
@@ -57,6 +57,15 @@
         </aside>
 
         <section class="studio" aria-label="Collage">
+          <div id="stageWrap" class="stage-wrap">
+            <div id="stage" class="stage">
+              <canvas id="synthCanvas" class="synth-canvas"></canvas>
+              <div id="piecesLayer" class="pieces-layer"></div>
+              <canvas id="paintCanvas" class="paint-canvas"></canvas>
+              <div id="stageEmpty" class="stage-empty">Arrastra materiales</div>
+            </div>
+          </div>
+
           <div class="studio-toolbar">
             <div class="tool-group" role="group" aria-label="Modo">
               <button id="selectModeBtn" class="tool active" type="button">Seleccion</button>
@@ -106,15 +115,6 @@
             </div>
             <textarea id="liveCodeInput" class="code-input" spellcheck="false"></textarea>
             <div id="codeStatus" class="code-status">vivo</div>
-          </div>
-
-          <div id="stageWrap" class="stage-wrap">
-            <div id="stage" class="stage">
-              <canvas id="synthCanvas" class="synth-canvas"></canvas>
-              <div id="piecesLayer" class="pieces-layer"></div>
-              <canvas id="paintCanvas" class="paint-canvas"></canvas>
-              <div id="stageEmpty" class="stage-empty">Arrastra materiales</div>
-            </div>
           </div>
         </section>
 
@@ -246,6 +246,6 @@
     <input id="fileInput" type="file" multiple hidden />
     <input id="folderInput" type="file" multiple webkitdirectory hidden />
 
-    <script src="app.js?v=5"></script>
+    <script src="app.js?v=6"></script>
   </body>
 </html>

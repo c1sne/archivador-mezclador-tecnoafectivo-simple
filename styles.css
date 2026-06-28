@@ -354,7 +354,7 @@ label.button:focus-visible {
 
 .studio {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto auto;
   overflow: hidden;
 }
 
@@ -365,7 +365,7 @@ label.button:focus-visible {
   gap: 10px;
   flex-wrap: wrap;
   padding: 9px;
-  border-bottom: 1px solid var(--line);
+  border-top: 1px solid var(--line);
   background: #fbfcfb;
 }
 
@@ -393,7 +393,7 @@ label.button:focus-visible {
   grid-template-rows: auto minmax(92px, 120px) auto;
   gap: 8px;
   padding: 10px 12px 12px;
-  border-bottom: 1px solid var(--line);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
   background: #171717;
   color: #f8faf7;
 }
@@ -496,7 +496,7 @@ label.button:focus-visible {
   position: relative;
   width: min(100%, 1180px);
   aspect-ratio: 16 / 9;
-  max-height: calc(100vh - 160px);
+  max-height: calc(100vh - 220px);
   min-height: 360px;
   border: 1px solid #9da7a0;
   border-radius: 6px;
