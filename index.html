@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mezclador Tecnoafectivo</title>
+    <meta name="theme-color" content="#087f75" />
+    <meta
+      name="description"
+      content="Herramienta local y abierta para archivar materiales visuales, mezclar collages y sintetizar imagen en vivo."
+    />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css?v=5" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <p>local-first / codigo abierto / imagen viva</p>
+          <h1>Mezclador Tecnoafectivo</h1>
+        </div>
+        <div class="top-actions">
+          <label class="button primary" for="fileInput">Importar archivos</label>
+          <label class="button" for="folderInput">Importar carpeta</label>
+          <button id="exportProjectBtn" class="button" type="button">Exportar indice</button>
+          <a
+            class="button ghost-link"
+            href="https://github.com/c1sne/archivador-mezclador-tecnoafectivo-simple"
+            target="_blank"
+            rel="noreferrer"
+          >GitHub</a>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="side-panel library-panel" aria-label="Biblioteca">
+          <section class="panel-section">
+            <div class="section-head">
+              <h2>Palabras clave</h2>
+              <button id="reanalyzeBtn" class="small-button" type="button">Aplicar</button>
+            </div>
+            <textarea id="rulesInput" spellcheck="false"></textarea>
+          </section>
+
+          <section class="panel-section">
+            <div class="section-head">
+              <h2>Archivo</h2>
+              <button id="clearLibraryBtn" class="small-button danger" type="button">Limpiar</button>
+            </div>
+            <input id="searchInput" type="search" placeholder="filtrar por palabra" />
+            <div id="stats" class="stats"></div>
+            <div id="libraryList" class="file-list"></div>
+            <button id="visionAnalyzeBtn" class="button wide" type="button">Analizar imagenes local</button>
+            <button id="organizeDiskBtn" class="button wide" type="button">Copiar a carpetas</button>
+          </section>
+        </aside>
+
+        <section class="studio" aria-label="Collage">
+          <div class="studio-toolbar">
+            <div class="tool-group" role="group" aria-label="Modo">
+              <button id="selectModeBtn" class="tool active" type="button">Seleccion</button>
+              <button id="paintModeBtn" class="tool" type="button">Pincel</button>
+            </div>
+
+            <div class="tool-group brush-tools">
+              <label class="mini-field">
+                <span>Color</span>
+                <input id="brushColor" type="color" value="#e11d48" />
+              </label>
+              <label class="mini-field">
+                <span>Tamano</span>
+                <input id="brushSize" type="range" min="2" max="80" value="18" />
+              </label>
+              <label class="mini-field">
+                <span>Tinta</span>
+                <input id="brushAlpha" type="range" min="10" max="100" value="82" />
+              </label>
+            </div>
+
+            <div class="tool-group">
+              <label class="mini-field">
+                <span>Fondo</span>
+                <input id="stageColor" type="color" value="#f4f5f3" />
+              </label>
+              <button id="addTextBtn" class="tool" type="button">Texto</button>
+              <button id="toggleCodeBtn" class="tool" type="button">Codigo vivo</button>
+              <button id="clearPaintBtn" class="tool" type="button">Borrar pintura</button>
+              <button id="exportPngBtn" class="tool strong" type="button">PNG</button>
+            </div>
+          </div>
+
+          <div id="liveCodePanel" class="live-code-panel closed">
+            <div class="code-topline">
+              <div class="code-title">Sintetizador</div>
+              <select id="synthPresetSelect" aria-label="Preset de codigo vivo">
+                <option value="neon">Neon</option>
+                <option value="agua">Agua</option>
+                <option value="pulso">Pulso</option>
+                <option value="scan">Scan</option>
+              </select>
+              <button id="applyPresetBtn" class="small-button" type="button">Preset</button>
+              <button id="runCodeBtn" class="small-button" type="button">Aplicar</button>
+              <button id="pauseSynthBtn" class="small-button" type="button">Play</button>
+              <button id="captureSynthBtn" class="small-button" type="button">Capturar</button>
+            </div>
+            <textarea id="liveCodeInput" class="code-input" spellcheck="false"></textarea>
+            <div id="codeStatus" class="code-status">vivo</div>
+          </div>
+
+          <div id="stageWrap" class="stage-wrap">
+            <div id="stage" class="stage">
+              <canvas id="synthCanvas" class="synth-canvas"></canvas>
+              <div id="piecesLayer" class="pieces-layer"></div>
+              <canvas id="paintCanvas" class="paint-canvas"></canvas>
+              <div id="stageEmpty" class="stage-empty">Arrastra materiales</div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="side-panel controls-panel" aria-label="Inspector">
+          <section class="panel-section">
+            <div class="section-head">
+              <h2>Material</h2>
+              <button id="deleteItemBtn" class="small-button danger" type="button">Borrar</button>
+            </div>
+
+            <div id="emptyInspector" class="empty-panel">Nada seleccionado</div>
+
+            <div id="selectedInspector" class="inspector" hidden>
+              <h3 id="materialTitle"></h3>
+              <p id="materialMeta"></p>
+
+              <div class="button-row">
+                <button id="duplicateItemBtn" class="small-button" type="button">Duplicar</button>
+                <button id="bringForwardBtn" class="small-button" type="button">Subir</button>
+                <button id="sendBackwardBtn" class="small-button" type="button">Bajar</button>
+              </div>
+
+              <label class="field">
+                <span>Superficie</span>
+                <select id="shapeControl">
+                  <option value="rect">Rectangulo</option>
+                  <option value="soft">Borde suave</option>
+                  <option value="circle">Circulo</option>
+                  <option value="diamond">Rombo</option>
+                  <option value="trapezoid">Trapecio</option>
+                  <option value="slice">Corte</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span>Mezcla</span>
+                <select id="blendControl">
+                  <option value="normal">Normal</option>
+                  <option value="multiply">Multiplicar</option>
+                  <option value="screen">Pantalla</option>
+                  <option value="overlay">Overlay</option>
+                  <option value="difference">Diferencia</option>
+                  <option value="exclusion">Exclusion</option>
+                  <option value="hard-light">Luz dura</option>
+                  <option value="color-dodge">Dodge</option>
+                </select>
+              </label>
+
+              <label class="range-row">
+                <span>Ancho <output id="widthValue"></output></span>
+                <input id="widthControl" type="range" min="40" max="900" value="260" />
+              </label>
+              <label class="range-row">
+                <span>Alto <output id="heightValue"></output></span>
+                <input id="heightControl" type="range" min="40" max="700" value="180" />
+              </label>
+              <label class="range-row">
+                <span>Rotacion <output id="rotationValue"></output></span>
+                <input id="rotationControl" type="range" min="-180" max="180" value="0" />
+              </label>
+              <label class="range-row">
+                <span>Opacidad <output id="opacityValue"></output></span>
+                <input id="opacityControl" type="range" min="0" max="100" value="100" />
+              </label>
+              <label class="range-row">
+                <span>Sesgo X <output id="skewXValue"></output></span>
+                <input id="skewXControl" type="range" min="-45" max="45" value="0" />
+              </label>
+              <label class="range-row">
+                <span>Sesgo Y <output id="skewYValue"></output></span>
+                <input id="skewYControl" type="range" min="-45" max="45" value="0" />
+              </label>
+              <label class="range-row">
+                <span>Brillo <output id="brightnessValue"></output></span>
+                <input id="brightnessControl" type="range" min="20" max="220" value="100" />
+              </label>
+              <label class="range-row">
+                <span>Contraste <output id="contrastValue"></output></span>
+                <input id="contrastControl" type="range" min="20" max="220" value="100" />
+              </label>
+              <label class="range-row">
+                <span>Saturacion <output id="saturationValue"></output></span>
+                <input id="saturationControl" type="range" min="0" max="240" value="100" />
+              </label>
+              <label class="range-row">
+                <span>Tono <output id="hueValue"></output></span>
+                <input id="hueControl" type="range" min="-180" max="180" value="0" />
+              </label>
+              <label class="range-row">
+                <span>Blur <output id="blurValue"></output></span>
+                <input id="blurControl" type="range" min="0" max="24" value="0" />
+              </label>
+
+              <div class="section-head compact-head">
+                <h2>Motor de ruido</h2>
+                <button id="randomNoiseBtn" class="small-button" type="button">Semilla</button>
+              </div>
+
+              <label class="range-row">
+                <span>Ruido <output id="noiseAmountValue"></output></span>
+                <input id="noiseAmountControl" type="range" min="0" max="100" value="0" />
+              </label>
+              <label class="range-row">
+                <span>Escala <output id="noiseScaleValue"></output></span>
+                <input id="noiseScaleControl" type="range" min="6" max="220" value="64" />
+              </label>
+              <label class="range-row">
+                <span>Distorsion <output id="noiseWarpValue"></output></span>
+                <input id="noiseWarpControl" type="range" min="0" max="90" value="0" />
+              </label>
+              <label class="range-row">
+                <span>Glitch <output id="glitchValue"></output></span>
+                <input id="glitchControl" type="range" min="0" max="100" value="0" />
+              </label>
+              <label class="range-row">
+                <span>Pixel <output id="pixelateValue"></output></span>
+                <input id="pixelateControl" type="range" min="0" max="32" value="0" />
+              </label>
+              <label class="range-row">
+                <span>Lineas <output id="scanlinesValue"></output></span>
+                <input id="scanlinesControl" type="range" min="0" max="100" value="0" />
+              </label>
+            </div>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <input id="fileInput" type="file" multiple hidden />
+    <input id="folderInput" type="file" multiple webkitdirectory hidden />
+
+    <script src="app.js?v=5"></script>
+  </body>
+</html>

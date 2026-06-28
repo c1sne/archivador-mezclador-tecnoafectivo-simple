@@ -1,0 +1,16 @@
+{
+  "name": "archivador-mezclador-tecnoafectivo-simple",
+  "version": "0.1.0",
+  "description": "Herramienta local y abierta para archivar materiales visuales, mezclar collages y sintetizar imagen en vivo.",
+  "private": true,
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/c1sne/archivador-mezclador-tecnoafectivo-simple.git"
+  },
+  "license": "MIT",
+  "scripts": {
+    "dev": "node server.mjs",
+    "start": "node server.mjs"
+  }
+}

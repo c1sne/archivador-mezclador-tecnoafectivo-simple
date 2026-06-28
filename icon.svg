@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Archivador Mezclador">
+  <rect width="512" height="512" rx="84" fill="#f4f5f3"/>
+  <path d="M86 144h152l34 42h154v196H86z" fill="#087f75"/>
+  <path d="M116 200h280v152H116z" fill="#fff" opacity=".92"/>
+  <path d="M150 325 225 232l56 63 42-48 47 78z" fill="#be123c"/>
+  <circle cx="335" cy="238" r="31" fill="#b7791f"/>
+  <path d="M130 140h108l31 38H130z" fill="#055c55"/>
+</svg>
