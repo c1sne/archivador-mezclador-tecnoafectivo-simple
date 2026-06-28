@@ -82,6 +82,7 @@ const el = {
   brushAlpha: $("brushAlpha"),
   stageColor: $("stageColor"),
   addTextBtn: $("addTextBtn"),
+  addDemoImageBtn: $("addDemoImageBtn"),
   clearPaintBtn: $("clearPaintBtn"),
   exportPngBtn: $("exportPngBtn"),
   stageWrap: $("stageWrap"),
@@ -224,6 +225,7 @@ function bindEvents() {
     el.stage.style.setProperty("--paper", el.stageColor.value);
   });
   el.addTextBtn.addEventListener("click", addTextItem);
+  el.addDemoImageBtn.addEventListener("click", addDemoImageItem);
   el.toggleCodeBtn.addEventListener("click", toggleCodePanel);
   el.applyPresetBtn.addEventListener("click", applySynthPreset);
   el.runCodeBtn.addEventListener("click", applyLiveCode);
@@ -651,6 +653,89 @@ function addTextItem() {
   normalizeLayers();
   selectItem(item.id);
   renderPieces();
+}
+
+function addDemoImageItem() {
+  const rect = el.stage.getBoundingClientRect();
+  const item = createBaseItem({
+    name: "demo distorsion",
+    kind: "image",
+    url: createDemoImageUrl(),
+    category: "demo",
+    x: rect.width / 2,
+    y: rect.height / 2,
+    w: Math.min(520, rect.width * 0.58),
+    h: Math.min(340, rect.height * 0.54),
+    shape: "soft",
+    saturation: 130,
+    contrast: 128,
+    noiseAmount: 52,
+    noiseScale: 42,
+    noiseWarp: 34,
+    glitch: 46,
+    pixelate: 5,
+    scanlines: 34,
+    noiseSeed: Math.floor(Math.random() * 100000),
+  });
+  state.items.push(item);
+  normalizeLayers();
+  selectItem(item.id);
+  renderPieces();
+}
+
+function createDemoImageUrl() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 960;
+  canvas.height = 620;
+  const ctx = canvas.getContext("2d");
+
+  const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  gradient.addColorStop(0, "#0f766e");
+  gradient.addColorStop(0.38, "#f8faf7");
+  gradient.addColorStop(0.68, "#be123c");
+  gradient.addColorStop(1, "#111827");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.globalAlpha = 0.9;
+  for (let x = -80; x < canvas.width + 120; x += 68) {
+    ctx.fillStyle = x % 136 === 0 ? "#facc15" : "#38bdf8";
+    ctx.fillRect(x, 0, 24, canvas.height);
+  }
+
+  ctx.globalAlpha = 0.72;
+  for (let y = 28; y < canvas.height; y += 56) {
+    ctx.fillStyle = y % 112 === 28 ? "#ffffff" : "#111827";
+    ctx.fillRect(0, y, canvas.width, 7);
+  }
+
+  ctx.globalAlpha = 0.88;
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(250, 230, 130, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#111827";
+  ctx.beginPath();
+  ctx.arc(250, 230, 66, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 12;
+  for (let i = 0; i < 9; i += 1) {
+    ctx.beginPath();
+    ctx.moveTo(440 + i * 26, 120);
+    ctx.bezierCurveTo(560 + i * 8, 250, 480 - i * 18, 350, 760, 510 - i * 20);
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = "#111827";
+  ctx.font = "800 72px system-ui, sans-serif";
+  ctx.fillText("WARP", 500, 280);
+  ctx.font = "700 32px system-ui, sans-serif";
+  ctx.fillText("imagen demo", 506, 326);
+
+  return canvas.toDataURL("image/png");
 }
 
 function renderPieces() {

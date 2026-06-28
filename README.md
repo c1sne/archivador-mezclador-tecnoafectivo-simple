@@ -34,6 +34,7 @@ Esta es una version temprana, usable y deliberadamente simple. Busca ser una bas
 - Clasificacion por reglas de palabras clave.
 - Analisis local basico de imagenes desde pixeles.
 - Lienzo de collage con posicion, escala, rotacion, opacidad, mezcla y superficies.
+- Imagen demo para probar distorsion sin importar archivos.
 - Motor de ruido por material: ruido, escala, distorsion, glitch, pixelado, lineas y semilla.
 - Pincel en vivo sobre el lienzo.
 - Sintetizador de codigo visual inspirado en Hydra.
